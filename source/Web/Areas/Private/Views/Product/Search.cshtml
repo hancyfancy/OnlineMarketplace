@@ -1,0 +1,437 @@
+﻿@model Web.Areas.Private.Models.ProductSearchModel
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
+@{
+    ViewData["Title"] = "Search Products";
+    Layout = "~/Views/Layouts/AuthenticatedMaster.cshtml";
+    var canSell = (await AuthorizationService.AuthorizeAsync(User, null, "ActiveSeller")).Succeeded;
+    var currentUserGuid = User.FindFirst("identity_guid")?.Value ?? "";
+}
+
+<style>
+    .archived-product { opacity: 0.6; filter: grayscale(60%); }
+    .archived-product:hover { opacity: 0.8; filter: grayscale(30%); transition: all .2s; }
+    .badge-archived { font-size: .7rem; letter-spacing: .03em; }
+</style>
+
+<nav aria-label="breadcrumb" class="breadcrumb-nav mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a asp-area="Private" asp-controller="Portal" asp-action="Index">Portal</a>
+        </li>
+        <li class="breadcrumb-item"><span>Product</span></li>
+        <li class="breadcrumb-item active" aria-current="page"><span>Search</span></li>
+    </ol>
+</nav>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mb-3">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger mb-3">@TempData["Error"]</div>
+}
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3"></div>
+}
+
+<form asp-area="Private" asp-controller="Product" asp-action="Search" method="get" class="mb-4">
+    <div class="input-group input-group-lg shadow-sm">
+        <input type="text" name="q" value="@Model.Q" class="form-control border-end-0"
+               placeholder="Search for anything..." autofocus>
+        <button type="submit" class="btn btn-primary px-5">&#128269; Search</button>
+    </div>
+</form>
+
+<div class="row g-3">
+
+    <div class="col-lg-2 col-md-3">
+        <form asp-area="Private" asp-controller="Product" asp-action="Search" method="get" id="filter-form">
+            <input type="hidden" name="q" value="@Model.Q">
+            <input type="hidden" name="sortBy" value="@Model.SortBy">
+            <input type="hidden" name="viewMode" value="@Model.ViewMode">
+
+            <div class="card border-0 shadow-sm mb-3 filter-card">
+                <div class="card-header bg-white small fw-semibold">Price Range</div>
+                <div class="card-body py-2 px-3">
+                    <div class="row g-1 mb-2">
+                        <div class="col">
+                            <input type="number" name="minPrice" value="@Model.MinPrice" min="0" step="0.01"
+                                   class="form-control form-control-sm" placeholder="Min">
+                        </div>
+                        <div class="col">
+                            <input type="number" name="maxPrice" value="@Model.MaxPrice" min="0" step="0.01"
+                                   class="form-control form-control-sm" placeholder="Max">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">Apply</button>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3 filter-card">
+                <div class="card-header bg-white small fw-semibold">Condition</div>
+                <div class="card-body py-2 px-3">
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="radio" name="condition" value=""
+                               id="cond_all" checked="@(string.IsNullOrEmpty(Model.Condition) ? "checked" : null)"
+                               onchange="document.getElementById('filter-form').submit()">
+                        <label class="form-check-label small" for="cond_all">All</label>
+                    </div>
+                    @foreach (var c in new[] { "new", "used", "refurbished" })
+                    {
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="radio" name="condition" value="@c"
+                                   id="cond_@c" checked="@(Model.Condition == c ? "checked" : null)"
+                                   onchange="document.getElementById('filter-form').submit()">
+                            <label class="form-check-label small" for="cond_@c">
+                                @System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(c)
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (Model.MinPrice.HasValue || Model.MaxPrice.HasValue || !string.IsNullOrEmpty(Model.Condition))
+            {
+                <a asp-area="Private" asp-controller="Product" asp-action="Search"
+                   asp-route-q="@Model.Q" class="btn btn-outline-secondary btn-sm w-100">
+                    &#x2715; Clear Filters
+                </a>
+            }
+        </form>
+    </div>
+
+    <div class="col-lg-10 col-md-9">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <span class="text-muted small">
+                @if (Model.TotalCount > 0)
+                {
+                    <strong>@Model.TotalCount</strong>
+                    @: result@(Model.TotalCount != 1 ? "s" : "")
+                    @if (!string.IsNullOrWhiteSpace(Model.Q))
+                    {
+                        @: for &ldquo;@Model.Q&rdquo;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(Model.Q))
+                {
+                    @:No results for &ldquo;@Model.Q&rdquo;
+                }
+            </span>
+
+            <div class="d-flex align-items-center gap-2">
+                <form asp-area="Private" asp-controller="Product" asp-action="Search" method="get" class="d-flex align-items-center gap-2">
+                    <input type="hidden" name="q" value="@Model.Q">
+                    <input type="hidden" name="category" value="@Model.Category">
+                    <input type="hidden" name="minPrice" value="@Model.MinPrice">
+                    <input type="hidden" name="maxPrice" value="@Model.MaxPrice">
+                    <input type="hidden" name="condition" value="@Model.Condition">
+                    <input type="hidden" name="viewMode" value="@Model.ViewMode" id="sort-view-mode">
+                    <select name="sortBy" class="form-select form-select-sm w-auto"
+                            onchange="this.form.submit()">
+                        <option value="relevance" selected="@(Model.SortBy == "relevance" ? "selected" : null)">Best Match</option>
+                        <option value="price_asc" selected="@(Model.SortBy == "price_asc" ? "selected" : null)">Price: Low to High</option>
+                        <option value="price_desc" selected="@(Model.SortBy == "price_desc" ? "selected" : null)">Price: High to Low</option>
+                        <option value="rating" selected="@(Model.SortBy == "rating" ? "selected" : null)">Best Rating</option>
+                        <option value="sold" selected="@(Model.SortBy == "sold" ? "selected" : null)">Most Sold</option>
+                        <option value="newest" selected="@(Model.SortBy == "newest" ? "selected" : null)">Newly Listed</option>
+                    </select>
+                </form>
+
+                <div class="btn-group btn-group-sm" id="view-toggle">
+                    <button type="button" class="btn btn-outline-primary @(Model.ViewMode == "grid" ? "active" : "")"
+                            data-view="grid" title="Grid view">&#9632;&#9632;</button>
+                    <button type="button" class="btn btn-outline-primary @(Model.ViewMode == "list" ? "active" : "")"
+                            data-view="list" title="List view">&#9776;</button>
+                </div>
+                @if (canSell)
+                {
+                    <a asp-area="Private" asp-controller="Product" asp-action="Add"
+                       class="btn btn-primary btn-sm">&#43; Add Product</a>
+                }
+            </div>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <div class="empty-state-icon">&#128269;</div>
+                <h5 class="mt-3">No products found</h5>
+                <p class="small">Try different keywords, or remove some filters.</p>
+            </div>
+        }
+        else
+        {
+            <div id="grid-view" class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3 @(Model.ViewMode == "list" ? "d-none" : "")">
+                @foreach (var item in Model.Items)
+                {
+                    <div class="col">
+                        <div class="card h-100 border-0 shadow-sm product-card @(item.IsArchived ? "archived-product" : "")">
+                            <div class="thumbnail-wrap overflow-hidden bg-light d-flex align-items-center justify-content-center position-relative">
+                                @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                                {
+                                    <img src="@item.ThumbnailUrl" alt="@item.Name" loading="lazy">
+                                }
+                                else
+                                {
+                                    <span class="thumbnail-placeholder">&#128247;</span>
+                                }
+                                @if (item.IsArchived)
+                                {
+                                    <span class="badge bg-dark badge-archived position-absolute top-0 start-0 m-2">&#128228; Archived</span>
+                                }
+                                else if (item.IsFeatured)
+                                {
+                                    <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2">Featured</span>
+                                }
+                                @if (!item.IsArchived && item.IsOnSale && item.DiscountPercentage > 0)
+                                {
+                                    <span class="badge bg-danger position-absolute top-0 end-0 m-2">
+                                        -@item.DiscountPercentage.ToString("0")%
+                                    </span>
+                                }
+                            </div>
+                            <div class="card-body d-flex flex-column p-3">
+                                @if (!string.IsNullOrEmpty(item.Condition))
+                                {
+                                    <span class="badge bg-secondary mb-1 align-self-start">@item.Condition</span>
+                                }
+                                @if (!string.IsNullOrEmpty(item.Brand))
+                                {
+                                    <div class="text-muted small mb-1">@item.Brand</div>
+                                }
+                                <div class="fw-semibold mb-1 text-truncate" title="@item.Name">@item.Name</div>
+                                @if (!string.IsNullOrEmpty(item.ShortDescription))
+                                {
+                                    <div class="text-muted small mb-2 text-clamp-2">
+                                        @item.ShortDescription
+                                    </div>
+                                }
+                                <div class="mt-auto">
+                                    <div class="small mb-1">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <span class="@(i <= (int)Math.Round(item.AverageRating) ? "star-filled" : "star-empty")">&#9733;</span>
+                                        }
+                                        <span class="text-muted small ms-1">(@item.ReviewCount)</span>
+                                    </div>
+                                    <div class="mb-1">
+                                        <span class="fw-bold text-danger">$@item.EffectivePrice.ToString("0.00")</span>
+                                        @if (item.OriginalPrice.HasValue)
+                                        {
+                                            <span class="text-muted small text-decoration-line-through ms-1">$@item.OriginalPrice.Value.ToString("0.00")</span>
+                                        }
+                                    </div>
+                                    <div class="small">
+                                        @if (item.ShippingCost == 0 || item.IsDigital)
+                                        {
+                                            <span class="text-success fw-semibold">+ Free @(item.IsDigital ? "Download" : "Shipping")</span>
+                                        }
+                                        else if (item.ShippingCost.HasValue)
+                                        {
+                                            <span class="text-muted">+ $@item.ShippingCost.Value.ToString("0.00") shipping</span>
+                                        }
+                                    </div>
+                                    @if (item.SoldCount > 0)
+                                    {
+                                        <div class="text-muted small">@item.SoldCount sold</div>
+                                    }
+                                    @if (!item.IsInStock)
+                                    {
+                                        <span class="badge bg-secondary small">Out of Stock</span>
+                                    }
+                                    else if (item.IsLowStock)
+                                    {
+                                        <span class="badge bg-warning text-dark small">Only a few left</span>
+                                    }
+                                    @if (canSell && !item.IsArchived && item.SellerGuid.ToString() == currentUserGuid)
+                                    {
+                                        <div class="mt-2 d-flex gap-1">
+                                            <a asp-area="Private" asp-controller="Product" asp-action="Update"
+                                               asp-route-productGuid="@item.ProductGuid"
+                                               class="btn btn-outline-secondary btn-sm flex-grow-1">&#9998; Edit</a>
+                                            <form asp-area="Private" asp-controller="Product" asp-action="Archive" method="post"
+                                                  onsubmit="return confirm('Do you really want to purge this product? This action cannot be undone.');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="productGuid" value="@item.ProductGuid" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Purge product">&#128228;</button>
+                                            </form>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div id="list-view" class="@(Model.ViewMode == "grid" ? "d-none" : "")">  
+                @foreach (var item in Model.Items)
+                {
+                    <div class="card border-0 shadow-sm product-card mb-3 @(item.IsArchived ? "archived-product" : "")">
+                        <div class="d-flex">
+                            <div class="list-thumbnail flex-shrink-0 position-relative">
+                                @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                                {
+                                    <img src="@item.ThumbnailUrl" alt="@item.Name" class="list-img" loading="lazy">
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-light list-img-placeholder">
+                                        <span class="list-placeholder-icon">&#128247;</span>
+                                    </div>
+                                }
+                                @if (item.IsFeatured)
+                                {
+                                    <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-1">Featured</span>
+                                }
+                            </div>
+                            <div class="card-body d-flex flex-column flex-md-row gap-3 p-3">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-start gap-2 flex-wrap mb-1">
+                                        @if (item.IsArchived)
+                                        {
+                                            <span class="badge bg-dark badge-archived">&#128228; Archived</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.Condition))
+                                        {
+                                            <span class="badge bg-secondary">@item.Condition</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.CategoryName))
+                                        {
+                                            <span class="badge bg-light text-muted border">@item.CategoryName</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(item.Brand))
+                                    {
+                                        <div class="text-muted small">@item.Brand</div>
+                                    }
+                                    <div class="fw-semibold fs-6 mb-1">@item.Name</div>
+                                    @if (!string.IsNullOrEmpty(item.ShortDescription))
+                                    {
+                                        <div class="text-muted small mb-2">@item.ShortDescription</div>
+                                    }
+                                    <div class="small">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <span class="@(i <= (int)Math.Round(item.AverageRating) ? "star-filled" : "star-empty")">&#9733;</span>
+                                        }
+                                        <span class="text-muted small ms-1">@item.ReviewCount review@(item.ReviewCount != 1 ? "s" : "")</span>
+                                    </div>
+                                    @if (item.SoldCount > 0)
+                                    {
+                                        <div class="text-muted small">@item.SoldCount sold</div>
+                                    }
+                                </div>
+                                <div class="text-md-end price-panel">
+                                    <div class="fw-bold text-danger fs-5">$@item.EffectivePrice.ToString("0.00")</div>
+                                    @if (item.OriginalPrice.HasValue)
+                                    {
+                                        <div class="text-muted small text-decoration-line-through">$@item.OriginalPrice.Value.ToString("0.00")</div>
+                                        <div class="badge bg-danger mb-1">-@item.DiscountPercentage.ToString("0")% off</div>
+                                    }
+                                    <div class="small mt-1">
+                                        @if (item.ShippingCost == 0 || item.IsDigital)
+                                        {
+                                            <span class="text-success fw-semibold">+ Free @(item.IsDigital ? "Download" : "Shipping")</span>
+                                        }
+                                        else if (item.ShippingCost.HasValue)
+                                        {
+                                            <span class="text-muted">+ $@item.ShippingCost.Value.ToString("0.00") shipping</span>
+                                        }
+                                    </div>
+                                    @if (!item.IsInStock)
+                                    {
+                                        <span class="badge bg-secondary mt-1">Out of Stock</span>
+                                    }
+                                    else if (item.IsLowStock)
+                                    {
+                                        <span class="badge bg-warning text-dark mt-1">Only a few left</span>
+                                    }
+                                    @if (canSell && !item.IsArchived && item.SellerGuid.ToString() == currentUserGuid)
+                                    {
+                                        <div class="mt-2 d-flex gap-1 justify-content-end">
+                                            <a asp-area="Private" asp-controller="Product" asp-action="Update"
+                                               asp-route-productGuid="@item.ProductGuid"
+                                               class="btn btn-outline-secondary btn-sm">&#9998; Edit</a>
+                                            <form asp-area="Private" asp-controller="Product" asp-action="Archive" method="post"
+                                                  onsubmit="return confirm('Do you really want to purge this product? This action cannot be undone.');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="productGuid" value="@item.ProductGuid" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Purge product">&#128228; Purge</button>
+                                            </form>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Search results pages" class="mt-4">
+                    <ul class="pagination justify-content-center flex-wrap">
+                        @if (Model.Page > 1)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-area="Private" asp-controller="Product" asp-action="Search"
+                                   asp-route-q="@Model.Q" asp-route-category="@Model.Category"
+                                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                                   asp-route-condition="@Model.Condition" asp-route-sortBy="@Model.SortBy"
+                                   asp-route-viewMode="@Model.ViewMode" asp-route-page="@(Model.Page - 1)">&laquo;</a>
+                            </li>
+                        }
+                        @for (int p = Math.Max(1, Model.Page - 3); p <= Math.Min(Model.TotalPages, Model.Page + 3); p++)
+                        {
+                            <li class="page-item @(p == Model.Page ? "active" : "")">
+                                <a class="page-link" asp-area="Private" asp-controller="Product" asp-action="Search"
+                                   asp-route-q="@Model.Q" asp-route-category="@Model.Category"
+                                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                                   asp-route-condition="@Model.Condition" asp-route-sortBy="@Model.SortBy"
+                                   asp-route-viewMode="@Model.ViewMode" asp-route-page="@p">@p</a>
+                            </li>
+                        }
+                        @if (Model.Page < Model.TotalPages)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-area="Private" asp-controller="Product" asp-action="Search"
+                                   asp-route-q="@Model.Q" asp-route-category="@Model.Category"
+                                   asp-route-minPrice="@Model.MinPrice" asp-route-maxPrice="@Model.MaxPrice"
+                                   asp-route-condition="@Model.Condition" asp-route-sortBy="@Model.SortBy"
+                                   asp-route-viewMode="@Model.ViewMode" asp-route-page="@(Model.Page + 1)">&raquo;</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    (function () {
+        var gridView = document.getElementById('grid-view');
+        var listView = document.getElementById('list-view');
+
+        document.querySelectorAll('#view-toggle button').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var view = this.dataset.view;
+                if (gridView) gridView.classList.toggle('d-none', view !== 'grid');
+                if (listView) listView.classList.toggle('d-none', view !== 'list');
+                document.querySelectorAll('#view-toggle button').forEach(function (b) {
+                    b.classList.toggle('active', b.dataset.view === view);
+                });
+                var url = new URL(window.location.href);
+                url.searchParams.set('viewMode', view);
+                history.replaceState(null, '', url.toString());
+                var sortViewMode = document.getElementById('sort-view-mode');
+                if (sortViewMode) sortViewMode.value = view;
+            });
+        });
+    })();
+</script>
+}

@@ -1,0 +1,14 @@
+@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Error";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>An error occurred</h2>
+<p>An unexpected error occurred. Please try again later.</p>
+
+@if (Model.RequestId != null)
+{
+    <p><small>Request ID: <code>@Model.RequestId</code></small></p>
+}

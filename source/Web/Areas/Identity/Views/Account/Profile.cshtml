@@ -1,0 +1,188 @@
+﻿@model Web.Areas.Identity.Models.Profile
+@{
+    ViewData["Title"] = "Profile";
+    Layout = "~/Views/Layouts/AuthenticatedMaster.cshtml";
+}
+
+@section Scripts {
+<script>
+    (function () {
+        const roleInput = document.getElementById('Role');
+        const sellerSection = document.getElementById('seller-profile-section');
+        const buyerSection = document.getElementById('buyer-profile-section');
+
+        function toggle() {
+            const role = (roleInput.value || '').toLowerCase();
+            sellerSection.style.display = role === 'seller' ? '' : 'none';
+            buyerSection.style.display = (role === 'buyer' || role === 'seller') ? '' : 'none';
+        }
+
+        toggle();
+    })();
+</script>
+}
+
+<nav aria-label="breadcrumb" class="breadcrumb-nav mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a asp-area="Identity" asp-controller="Account" asp-action="Index">Account</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page"><span>Profile</span></li>
+    </ol>
+</nav>
+
+<h2>Profile</h2>
+
+<div class="row">
+    <div class="col-md-12">
+        <form asp-area="Identity" asp-controller="Account" asp-action="Profile" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <h5 class="mt-3 mb-3">Account</h5>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" readonly>
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Role" class="form-label"></label>
+                <input asp-for="Role" class="form-control" readonly>
+                <span asp-validation-for="Role" class="text-danger"></span>
+            </div>
+
+            <h5 class="mt-4 mb-3">Personal Information</h5>
+            <div class="mb-3">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control">
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control">
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control">
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+
+            <div id="seller-profile-section">
+            <h5 class="mt-4 mb-3">Seller Profile</h5>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.BusinessName" class="form-label">Business Name</label>
+                <input asp-for="SellerProfile.BusinessName" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.BusinessType" class="form-label">Business Type</label>
+                <select asp-for="SellerProfile.BusinessType" class="form-select">
+                    <option value="individual">Individual</option>
+                    <option value="llc">LLC</option>
+                    <option value="corporation">Corporation</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.BusinessTaxId" class="form-label">Business Tax ID</label>
+                <input asp-for="SellerProfile.BusinessTaxId" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.BusinessRegistrationNumber" class="form-label">Registration Number</label>
+                <input asp-for="SellerProfile.BusinessRegistrationNumber" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.BusinessRegistrationCountry" class="form-label">Registration Country</label>
+                <input asp-for="SellerProfile.BusinessRegistrationCountry" class="form-control" placeholder="e.g. AU">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.VatNumber" class="form-label">VAT Number</label>
+                <input asp-for="SellerProfile.VatNumber" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.HandlingTimeDays" class="form-label">Handling Time (days)</label>
+                <input asp-for="SellerProfile.HandlingTimeDays" type="number" min="1" max="30" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.ReturnPolicyDays" class="form-label">Return Policy (days)</label>
+                <input asp-for="SellerProfile.ReturnPolicyDays" type="number" min="0" max="365" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.RefundPolicy" class="form-label">Refund Policy</label>
+                <select asp-for="SellerProfile.RefundPolicy" class="form-select">
+                    <option value="full">Full Refund</option>
+                    <option value="partial">Partial Refund</option>
+                    <option value="store_credit">Store Credit</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label asp-for="SellerProfile.PayoutSchedule" class="form-label">Payout Schedule</label>
+                <select asp-for="SellerProfile.PayoutSchedule" class="form-select">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Biweekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Seller Tier</label>
+                <input value="@Model.SellerProfile.SellerTier" class="form-control" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Seller Status</label>
+                <input value="@Model.SellerProfile.SellerStatus" class="form-control" readonly>
+            </div>
+
+            </div>
+
+            <div id="buyer-profile-section">
+            <h5 class="mt-4 mb-3">Buyer Profile</h5>
+            <div class="mb-3">
+                <label asp-for="BuyerProfile.PreferredCurrency" class="form-label">Preferred Currency</label>
+                <select asp-for="BuyerProfile.PreferredCurrency" class="form-select">
+                    <option value="AUD">AUD - Australian Dollar</option>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="CAD">CAD - Canadian Dollar</option>
+                    <option value="JPY">JPY - Japanese Yen</option>
+                    <option value="NZD">NZD - New Zealand Dollar</option>
+                    <option value="SGD">SGD - Singapore Dollar</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Buyer Level</label>
+                <input value="@Model.BuyerProfile.BuyerLevel" class="form-control" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Trust Score</label>
+                <input value="@Model.BuyerProfile.TrustScore" class="form-control" readonly>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Total Purchases</label>
+                    <input value="@Model.BuyerProfile.TotalPurchases.ToString("C")" class="form-control" readonly>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Avg Order Value</label>
+                    <input value="@Model.BuyerProfile.AvgOrderValue.ToString("C")" class="form-control" readonly>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Total Returns</label>
+                    <input value="@Model.BuyerProfile.TotalReturns" class="form-control" readonly>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Open Disputes</label>
+                    <input value="@Model.BuyerProfile.OpenDisputes" class="form-control" readonly>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Dispute Rate</label>
+                    <input value="@Model.BuyerProfile.DisputeRate.ToString("P2")" class="form-control" readonly>
+                </div>
+            </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,244 @@
+﻿@model Web.Areas.Private.Models.UpdateProductModel
+@{
+    ViewData["Title"] = "Update Product";
+    Layout = "~/Views/Layouts/AuthenticatedMaster.cshtml";
+}
+
+<nav aria-label="breadcrumb" class="breadcrumb-nav mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a asp-area="Private" asp-controller="Portal" asp-action="Index">Portal</a>
+        </li>
+        <li class="breadcrumb-item">
+            <a asp-area="Private" asp-controller="Product" asp-action="Search">Product</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page"><span>Update</span></li>
+    </ol>
+</nav>
+
+<h4 class="mb-4">Update Product</h4>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3"></div>
+}
+
+<form id="product-form" asp-area="Private" asp-controller="Product" asp-action="Update" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ProductGuid" />
+    <input type="hidden" asp-for="SellerGuid" />
+
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold small">Product Details</div>
+                <div class="card-body p-4">
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label fw-semibold"></label>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. Vintage Denim Jacket" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CategoryGuid" class="form-label fw-semibold"></label>
+                        <select asp-for="CategoryGuid" asp-items="Model.CategoryOptions" class="form-select">
+                            <option value="">— Select category —</option>
+                        </select>
+                        <span asp-validation-for="CategoryGuid" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ShortDescription" class="form-label fw-semibold"></label>
+                        <textarea asp-for="ShortDescription" class="form-control" rows="3"
+                                  placeholder="Brief description shown in search results"></textarea>
+                        <span asp-validation-for="ShortDescription" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label asp-for="Brand" class="form-label fw-semibold"></label>
+                            <input asp-for="Brand" class="form-control" placeholder="e.g. Nike" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="BasePrice" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="BasePrice" class="form-control" placeholder="0.00" />
+                            </div>
+                            <span asp-validation-for="BasePrice" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label asp-for="SearchKeywords" class="form-label fw-semibold"></label>
+                        <input asp-for="SearchKeywords" class="form-control"
+                               placeholder="Comma-separated keywords to boost search visibility" />
+                    </div>
+
+                </div>
+            </div>
+
+            @* ── Variants ── *@
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                    <span class="fw-semibold small">Variants</span>
+                    <button type="button" id="add-variant" class="btn btn-outline-primary btn-sm">
+                        + Add Variant
+                    </button>
+                </div>
+                <div class="card-body p-2">
+                    <div id="variant-table"></div>
+                </div>
+            </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold small">Shipping</div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label asp-for="ShippingType" class="form-label fw-semibold"></label>
+                        <select asp-for="ShippingType" class="form-select">
+                            <option value="">— Select type —</option>
+                            <option value="free">Free Shipping</option>
+                            <option value="flat">Flat Rate</option>
+                            <option value="calculated">Calculated</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label asp-for="ShippingCost" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="ShippingCost" class="form-control" placeholder="0.00" />
+                        </div>
+                        <span asp-validation-for="ShippingCost" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white fw-semibold small">Options</div>
+                <div class="card-body p-4">
+                    <div class="form-check mb-2">
+                        <input asp-for="IsDigital" class="form-check-input" type="checkbox" />
+                        <label asp-for="IsDigital" class="form-check-label">Digital Product</label>
+                    </div>
+                    <div class="form-check">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                        <label asp-for="IsActive" class="form-check-label">Active (visible in search)</label>
+                    </div>
+                </div>
+            </div>
+
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">Save Changes</button>
+            <a asp-area="Private" asp-controller="Product" asp-action="Search"
+               class="btn btn-outline-secondary">Cancel</a>
+        </div>
+</form>
+
+@section Styles {
+<link rel="stylesheet" href="~/lib/tabulator/dist/css/tabulator_bootstrap5.min.css" />
+}
+
+@section Scripts {
+<script src="~/lib/tabulator/dist/js/tabulator.min.js"></script>
+<script>
+(function () {
+    var conditionMap = { new: 'New', used: 'Used', refurbished: 'Refurbished' };
+    var table = new Tabulator('#variant-table', {
+        data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Variants.Select(v => new {
+            variantGuid   = v.VariantGuid.HasValue ? v.VariantGuid.Value.ToString() : "",
+            name          = v.Name          ?? "",
+            color         = v.Color         ?? "",
+            size          = v.Size          ?? "",
+            material      = v.Material      ?? "",
+            condition     = v.Condition,
+            unitPrice     = v.UnitPrice,
+            compareAtPrice = v.CompareAtPrice,
+            unitsInStock  = v.UnitsInStock,
+            unitsReserved = v.UnitsReserved,
+            imageUrl      = v.ImageUrl      ?? "",
+            weightGrams      = v.WeightGrams,
+            packageLengthCm  = v.PackageLengthCm,
+            packageWidthCm   = v.PackageWidthCm,
+            packageHeightCm  = v.PackageHeightCm
+        }))),
+        layout: 'fitData',
+        placeholder: 'No variants yet \u2014 click + Add Variant to add one.',
+        columns: [
+            { field: 'variantGuid', visible: false },
+            { title: 'Name',       field: 'name',           editor: 'input',  minWidth: 120 },
+            { title: 'Color',      field: 'color',          editor: 'input',  minWidth: 75  },
+            { title: 'Size',       field: 'size',           editor: 'input',  minWidth: 65  },
+            { title: 'Material',   field: 'material',       editor: 'input',  minWidth: 75  },
+            { title: 'Condition',  field: 'condition',      editor: 'list',   minWidth: 100,
+              editorParams: { values: conditionMap },
+              formatter: 'lookup', formatterParams: conditionMap },
+            { title: 'Unit Price', field: 'unitPrice',      editor: 'number', minWidth: 90,
+              editorParams: { min: 0, step: 0.01 },
+              formatter: 'money', formatterParams: { symbol: '$', precision: 2 } },
+            { title: 'Compare At', field: 'compareAtPrice', editor: 'number', minWidth: 90,
+              editorParams: { min: 0, step: 0.01 },
+              formatter: 'money', formatterParams: { symbol: '$', precision: 2 } },
+            { title: 'In Stock',   field: 'unitsInStock',   editor: 'number', minWidth: 78,
+              editorParams: { min: 0, step: 1 } },
+            { title: 'Reserved',   field: 'unitsReserved',  editor: 'number', minWidth: 78,
+              editorParams: { min: 0, step: 1 } },
+            { title: 'Image URL',  field: 'imageUrl',       editor: 'input',  minWidth: 100 },
+            { title: 'Weight (g)', field: 'weightGrams',    editor: 'number', minWidth: 85,
+              editorParams: { min: 0, step: 0.01 } },
+            { title: 'L (cm)',     field: 'packageLengthCm', editor: 'number', minWidth: 72,
+              editorParams: { min: 0, step: 0.01 } },
+            { title: 'W (cm)',     field: 'packageWidthCm',  editor: 'number', minWidth: 72,
+              editorParams: { min: 0, step: 0.01 } },
+            { title: 'H (cm)',     field: 'packageHeightCm', editor: 'number', minWidth: 72,
+              editorParams: { min: 0, step: 0.01 } },
+            { title: '', formatter: 'buttonCross', hozAlign: 'center', headerSort: false, width: 40,
+              cellClick: function (e, cell) { cell.getRow().delete(); } }
+        ]
+    });
+
+    document.getElementById('add-variant').addEventListener('click', function () {
+        table.addRow({ variantGuid: '', condition: 'new', unitPrice: 0, unitsInStock: 1, unitsReserved: 0, weightGrams: null, packageLengthCm: null, packageWidthCm: null, packageHeightCm: null });
+    });
+
+    document.getElementById('product-form').addEventListener('submit', function () {
+        var form = this;
+        form.querySelectorAll('[data-vf]').forEach(function (el) { el.remove(); });
+        table.getData().forEach(function (row, i) {
+            [
+                ['VariantGuid',    row.variantGuid    ?? ''],
+                ['Name',           row.name           ?? ''],
+                ['Color',          row.color          ?? ''],
+                ['Size',           row.size           ?? ''],
+                ['Material',       row.material       ?? ''],
+                ['Condition',      row.condition      ?? 'new'],
+                ['UnitPrice',      row.unitPrice      ?? 0],
+                ['CompareAtPrice', row.compareAtPrice ?? ''],
+                ['UnitsInStock',   row.unitsInStock   ?? 0],
+                ['UnitsReserved',  row.unitsReserved  ?? 0],
+                ['ImageUrl',       row.imageUrl       ?? ''],
+                ['WeightGrams',    row.weightGrams    ?? ''],
+                ['PackageLengthCm', row.packageLengthCm ?? ''],
+                ['PackageWidthCm',  row.packageWidthCm  ?? ''],
+                ['PackageHeightCm', row.packageHeightCm ?? '']
+            ].forEach(function (pair) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'Variants[' + i + '].' + pair[0];
+                inp.value = pair[1];
+                inp.setAttribute('data-vf', '1');
+                form.appendChild(inp);
+            });
+        });
+    });
+})();
+</script>
+}
